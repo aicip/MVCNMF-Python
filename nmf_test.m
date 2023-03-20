@@ -1,5 +1,6 @@
 clear;
-
+% Start the timer
+tic
 % read data
 load('A');
 load BANDS;
@@ -169,5 +170,11 @@ SID = sum(pA .* log((pA +1e-9) ./ (qA +1e-9))) + sum(qA .* log((qA +1e-9) ./ (pA
 E_sid = mean(SID .^ 2) ^ .5;
 display(E_sid);
 
-% Print that the program has finished
+% Stop the timer
+elapsed_time = toc;
+
+% Display the elapsed time in seconds
+fprintf('Elapsed time: %.2f seconds\n', elapsed_time);
+
+% Program finished
 disp('Finished');

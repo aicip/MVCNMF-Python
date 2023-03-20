@@ -1,17 +1,24 @@
 clear;
-% clear all; % Use this to reliably meaasure time.
 
 % Parameters
-input_mat_name = 'A';
-num_bands = 4;
+input_mat_name = 'A.mat';
+c = 4;
 
 % Start the timer
 tic
-% read data
-load(input_mat_name);
+
+% --- read data --- %
+% Load the list of variables in the .mat file
+variables = who('-file', input_mat_name);
+% Load the first variable in the list
+loaded_variable = load(input_mat_name, variables{1});
+% Set variable A equal to the loaded variable
+A = loaded_variable.(variables{1});
+% Load bands
 load BANDS;
-c = num_bands;
 A = A(BANDS, (1:c));
+
+% --- process --- %
 [mixed, abf] = getSynData(A, 7, 0);
 [M, N, D] = size(mixed);
 mixed = reshape(mixed, M * N, D);

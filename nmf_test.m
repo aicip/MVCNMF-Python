@@ -1,11 +1,11 @@
-clear all;
+clear;
 
 % read data
 load('A');
 load BANDS;
 type = 5;
 c = 4;
-A = A(BANDS, [1:c]);
+A = A(BANDS, (1:c));
 [mixed, abf] = getSynData(A, 7, 0);
 [M, N, D] = size(mixed);
 mixed = reshape(mixed, M * N, D);
@@ -47,9 +47,10 @@ sinit = s_fcls;
 % sinit = zeros(c,M*N);
 
 % PCA
-%[PrinComp,meanData] = pca(mixed',0);')
-[PrinComp, pca_score] = princomp(mixed', 0);
-meanData = mean(mixed');
+[PrinComp, pca_score] = pca(mixed');
+meanData = mean(pca_score);
+%[PrinComp, pca_score] = princomp(mixed', 0);
+%meanData = mean(mixed');
 
 % test mvcnmf
 tol = 1e-6;
@@ -63,7 +64,7 @@ showflag = 1;
 % visualize endmembers in scatterplots
 d = 4;
 
-if showflag,
+if showflag
     Anmf = UU' * Aest;
     figure,
 
@@ -87,7 +88,7 @@ perm_mtx = zeros(c, c);
 aux = zeros(c, 1);
 
 for i = 1:c
-    [ld cd] = find(max(DD(:)) == DD);
+    [ld, cd] = find(max(DD(:)) == DD);
     ld = ld(1); cd = cd(1); % in the case of more than one maximum
     perm_mtx(ld, cd) = 1;
     DD(:, cd) = aux; DD(ld, :) = aux';
@@ -99,7 +100,7 @@ Sest = reshape(sest, [M, N, c]);
 sest = sest';
 
 % show the estimations
-if showflag,
+if showflag
     figure,
 
     for i = 1:c
@@ -138,30 +139,35 @@ end
 % quantitative evaluation of spectral signature and abundance
 
 % rmse error of abundances
-E_rmse = sqrt(sum(sum(((abf - sest) .* (abf - sest)) .^ 2)) / (M * N * c))
+E_rmse = sqrt(sum(sum(((abf - sest) .* (abf - sest)) .^ 2)) / (M * N * c));
+display(E_rmse);
 
 % the angle between abundances
 nabf = diag(abf * abf');
 nsest = diag(sest * sest');
 ang_beta = 180 / pi * acos(diag(abf * sest') ./ sqrt(nabf .* nsest));
-E_aad = mean(ang_beta .^ 2) ^ .5
+E_aad = mean(ang_beta .^ 2) ^ .5;
+display(E_aad);
 
 % cross entropy between abundance
 E_entropy = sum(abf .* log((abf +1e-9) ./ (sest +1e-9))) + sum(sest .* log((sest +1e-9) ./ (abf +1e-9)));
-E_aid = mean(E_entropy .^ 2) ^ .5
+E_aid = mean(E_entropy .^ 2) ^ .5;
+display(E_aid);
 
 % the angle between material signatures
 nA = diag(A' * A);
 nAest = diag(Aest' * Aest);
 ang_theta = 180 / pi * acos(diag(A' * Aest) ./ sqrt(nA .* nAest));
-E_sad = mean(ang_theta .^ 2) ^ .5
+E_sad = mean(ang_theta .^ 2) ^ .5;
+display(E_sad);
 
 % the spectral information divergence
 pA = A ./ (repmat(sum(A), [length(A(:, 1)) 1]));
 qA = Aest ./ (repmat(sum(Aest), [length(A(:, 1)) 1]));
 qA = abs(qA);
 SID = sum(pA .* log((pA +1e-9) ./ (qA +1e-9))) + sum(qA .* log((qA +1e-9) ./ (pA +1e-9)));
-E_sid = mean(SID .^ 2) ^ .5
+E_sid = mean(SID .^ 2) ^ .5;
+display(E_sid);
 
 % Print that the program has finished
 disp('Finished');

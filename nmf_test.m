@@ -1,11 +1,16 @@
 clear;
+% clear all; % Use this to reliably meaasure time.
+
+% Parameters
+input_mat_name = 'A';
+num_bands = 4;
+
 % Start the timer
 tic
 % read data
-load('A');
+load(input_mat_name);
 load BANDS;
-type = 5;
-c = 4;
+c = num_bands;
 A = A(BANDS, (1:c));
 [mixed, abf] = getSynData(A, 7, 0);
 [M, N, D] = size(mixed);
@@ -176,5 +181,9 @@ elapsed_time = toc;
 % Display the elapsed time in seconds
 fprintf('Elapsed time: %.2f seconds\n', elapsed_time);
 
+% Save output
+outputFileName = sprintf('output_%s.mat', input_mat_name);
+
+save(outputFileName, 'Aest', 'sest', 'E_rmse', 'E_aad', 'E_aid', 'E_sad', 'E_sid');
 % Program finished
 disp('Finished');

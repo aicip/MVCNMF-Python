@@ -2,20 +2,23 @@ clear;
 
 % Parameters
 input_mat_name = 'A.mat';
+bands_mat_name = 'BANDS.mat';
 c = 4;
 
 % Start the timer
 tic
 
 % --- read data --- %
+input_path = sprintf('inputs/%s', input_mat_name);
+bands_path = sprintf('inputs/%s', bands_mat_name);
 % Load the list of variables in the .mat file
-variables = who('-file', input_mat_name);
+variables = who('-file', input_path);
 % Load the first variable in the list
-loaded_variable = load(input_mat_name, variables{1});
+loaded_variable = load(input_path, variables{1});
 % Set variable A equal to the loaded variable
 A = loaded_variable.(variables{1});
 % Load bands
-load BANDS;
+load(bands_path);
 A = A(BANDS, (1:c));
 
 % --- process --- %
@@ -35,7 +38,7 @@ clear n;
 Lowmixed = UU' * mixed;
 mixed = UU * Lowmixed;
 EM = UU' * A;
-
+% return  % todo: remove me
 % vca algorithm
 [A_vca, EndIdx] = vca(mixed, 'Endmembers', c, 'SNR', SNR, 'verbose', 'on');
 
@@ -189,7 +192,7 @@ elapsed_time = toc;
 fprintf('Elapsed time: %.2f seconds\n', elapsed_time);
 
 % Save output
-outputFileName = sprintf('output_%s.mat', input_mat_name);
+outputFileName = sprintf('outputs/output_%s', input_mat_name);
 
 save(outputFileName, 'Aest', 'sest', 'E_rmse', 'E_aad', 'E_aid', 'E_sad', 'E_sid');
 % Program finished

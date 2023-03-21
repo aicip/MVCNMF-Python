@@ -1,46 +1,79 @@
 clear;
 
-% Parameters
-input_mat_name = 'A.mat';
-bands_mat_name = 'BANDS.mat';
-c = 4;
+% --- Parameters --- %
+% input parameters
+use_synthetic_data = 0; % 1 for synthetic data, 0 for real data
+% Syntheitc Data
+% input_mat_name = 'A.mat';
+% bands_mat_name = 'BANDS.mat';
+% bands = (1:4);
+% Landsat Data
+input_mat_name = 'Landsat_separate_images.mat';
+c = 18; % number of endmembers
 
-% Start the timer
-tic
+% mvcnmf parameters
+SNR = 20; %dB
+tol = 1e-6;
+maxiter = 150;
+T = 0.015;
+showflag = 0;
+verbose = 'on'; % 'on' or 'off'
 
 % --- read data --- %
 input_path = sprintf('inputs/%s', input_mat_name);
-bands_path = sprintf('inputs/%s', bands_mat_name);
 % Load the list of variables in the .mat file
 variables = who('-file', input_path);
 % Load the first variable in the list
 loaded_variable = load(input_path, variables{1});
 % Set variable A equal to the loaded variable
 A = loaded_variable.(variables{1});
-% Load bands
-load(bands_path);
-A = A(BANDS, (1:c));
+if use_synthetic_data == 1
+    % Load bands
+    if isempty(bands_mat_name) || isempty(bands)
+        A = A(:, (1:c));
+    else
+        if isempty(bands_mat_name)
+            disp("using code-specified bands");
+            A = A(bands, (1:c));
+        else
+            disp("using bands file");
+            bands_path = sprintf('inputs/%s', bands_mat_name);
+            load(bands_path);
+            A = A(BANDS, (1:c));
+        end
+    end
+end
 
 % --- process --- %
-[mixed, abf] = getSynData(A, 7, 0);
-[M, N, D] = size(mixed);
-mixed = reshape(mixed, M * N, D);
+% start the timer
+tic
 
-% add noise
-SNR = 20; %dB
-variance = sum(mixed(:) .^ 2) / 10 ^ (SNR / 10) / M / N / D;
-n = sqrt(variance) * randn([D M * N]);
-mixed = mixed' + n;
-clear n;
+if use_synthetic_data == 1
+    [synthetic, abf] = getSynData(A, 7, 0);
+    [M, N, D] = size(synthetic);
+    mixed = reshape(synthetic, M * N, D);
+    % add noise
+    variance = sum(mixed(:) .^ 2) / 10 ^ (SNR / 10) / M / N / D;
+    n = sqrt(variance) * randn([D M * N]);
+    mixed = mixed' + n;
+    clear n;
+    
+    % remove noise
+    [UU, SS, VV] = svds(mixed, c);
+    Lowmixed = UU' * mixed;
+    mixed = UU * Lowmixed;
+    EM = UU' * A;
 
-% remove noise
-[UU, SS, VV] = svds(mixed, c);
-Lowmixed = UU' * mixed;
-mixed = UU * Lowmixed;
-EM = UU' * A;
-% return  % todo: remove me
-% vca algorithm
-[A_vca, EndIdx] = vca(mixed, 'Endmembers', c, 'SNR', SNR, 'verbose', 'on');
+    % vca algorithm
+    [A_vca, EndIdx] = vca(mixed, 'Endmembers', c, 'SNR', SNR, 'verbose', verbose);
+else
+    % load data
+    [M, N, D] = size(A);
+    mixed = reshape(A, M * N, D);
+
+    % vca algorithm
+    [A_vca, EndIdx] = vca(mixed, 'Endmembers', c, 'verbose', verbose);
+end
 
 % FCLS
 warning off;
@@ -49,6 +82,9 @@ s_fcls = zeros(length(A_vca(1, :)), M * N);
 
 for j = 1:M * N
     r = [1e-5 * mixed(:, j); 1];
+    % print j and r shape
+    fprintf('j = %d, r shape = %d\n', j, size(r));
+    
     %   s_fcls(:,j) = nnls(AA,r);
     s_fcls(:, j) = lsqnonneg(AA, r);
 end
@@ -67,12 +103,6 @@ sinit = s_fcls;
 meanData = mean(pca_score);
 %[PrinComp, pca_score] = princomp(mixed', 0);
 %meanData = mean(mixed');
-
-% test mvcnmf
-tol = 1e-6;
-maxiter = 150;
-T = 0.015;
-showflag = 1;
 
 % use conjugate gradient to find A can speed up the learning
 [Aest, sest] = mvcnmf(mixed, Ainit, sinit, A, UU, PrinComp, meanData, T, tol, maxiter, showflag, 2, 1);

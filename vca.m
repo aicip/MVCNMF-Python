@@ -25,15 +25,15 @@ function [Ae, indice, Rp] = vca(R,varargin)
 %          v - [{'on'} | 'off']
 % ------------------------------------
 %
-% Authors: José Nascimento (zen@isel.pt) 
-%          José Bioucas Dias (bioucas@lx.it.pt) 
+% Authors: Josï¿½ Nascimento (zen@isel.pt) 
+%          Josï¿½ Bioucas Dias (bioucas@lx.it.pt) 
 % Copyright (c)
 % version: 2.1 (7-May-2004)
 %
 % For any comment contact the authors
 %
 % more details on:
-% José M. P. Nascimento and José M. B. Dias 
+% Josï¿½ M. P. Nascimento and Josï¿½ M. B. Dias 
 % "Vertex Component Analysis: A Fast Algorithm to Unmix Hyperspectral Data"
 % submited to IEEE Trans. Geosci. Remote Sensing, vol. .., no. .., pp. .-., 2004
 % 
@@ -85,7 +85,9 @@ function [Ae, indice, Rp] = vca(R,varargin)
          end                   
                
          if (p<0 | p>L | rem(p,1)~=0),  
-            error('ENDMEMBER parameter must be integer between 1 and L');
+            % raise error and show actual values of p and L
+            error_txt = sprintf('ENDMEMBERS parameter (%d) must be integer between 1 and %d',p,L);
+            error(error_txt);
          end
         
         

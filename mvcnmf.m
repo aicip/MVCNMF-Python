@@ -1,9 +1,9 @@
-function [A,S,time] = mvcnmf_secord(X,Ainit,Sinit,Atrue,UU,PrinComp,meanData,T,tol,maxiter,showflag,type_alg_S,type_alg_A)
+function [A,S,time] = mvcnmf_secord(X,Ainit,Sinit,Atrue,UU,PrinComp,meanData,T,tol,maxiter,showflag,type_alg_S,type_alg_A,use_synthetic_data)
 
 % A,S: output solution
 % Ainit,Sinit: initial solutions
 % Atrue: true endmembers
-% UU: principle components for visualization (SVD)
+% UU: principle components for visualization (SVD) (optional)
 % PrinComp: principal components for calculating volme (PCA)
 % meanData: for calculating volume
 % T: annealing temprature
@@ -12,6 +12,7 @@ function [A,S,time] = mvcnmf_secord(X,Ainit,Sinit,Atrue,UU,PrinComp,meanData,T,t
 % showflag: display scatter plot (1)
 % type_alg_S: algorithms for estimating S
 % type_alg_A: algorithms for estimating A
+% use_synthetic_data: Whether using synthetic data
 
 A = Ainit; S = Sinit; 
 
@@ -20,13 +21,14 @@ c = size(S,1);     % number of endmembers
 N = size(S,2);     % number of pixels
 
 % precalculation for visualization
-EM = UU'*Atrue;         % low dimensional endmembers
-LowX = UU'*X;           % low dimensional data
-
+if use_synthetic_data == 1
+    EM = UU'*Atrue;         % low dimensional endmembers
+    LowX = UU'*X;           % low dimensional data
+    E = [ones(1,c);PrinComp(:,1:c-1)'*(Atrue-meanData'*ones(1,c))];
+    vol_t = 1/factorial(c-1)*abs(det(E)); % the volume of true endmembers
+end
 
 % PCA to calculate the volume of true EM
-E = [ones(1,c);PrinComp(:,1:c-1)'*(Atrue-meanData'*ones(1,c))];
-vol_t = 1/factorial(c-1)*abs(det(E)); % the volume of true endmembers
 vol = [];
 
 % calculate volume of estimated A
@@ -36,7 +38,7 @@ Z = C+B*(PrinComp(:,1:c-1)'*(A-meanData'*ones(1,c)));
 detz2 = det(Z)*det(Z);
 
 % one time draw
-if showflag,
+if showflag
     startA = UU'*Ainit;
     figure(1),
     for i=1:3
@@ -103,7 +105,11 @@ while inc<5 & inc0<20
     vol_e = 1/factorial(c-1)*abs(det(E));
     fprintf('[%d]: %.5f\t',iter,objhistory(end));    
     fprintf('Temperature: %f \t', T);
-    fprintf('Actual Vol.: %f \t Estimated Vol.: %f\n', vol_t, vol_e);
+    if use_synthetic_data == 1
+        fprintf('Actual Vol.: %f \t Estimated Vol.: %f\n', vol_t, vol_e);
+    else
+        fprintf('Estimated Vol.: %f\n', vol_e);
+    end
     vol(iter+1) = vol_e;
     
     % real time draw

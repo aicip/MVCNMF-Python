@@ -1,2 +1,4 @@
 **/*Landsat*
 **/.DS_Store
+outputs/*
+**/.vscode

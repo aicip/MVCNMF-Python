@@ -9,11 +9,11 @@ clear;
 % bands_mat_name = 'BANDS.mat';
 % Landsat Data
 use_synthetic_data = 0; % 1 for synthetic data, 0 for real data
-input_mat_name = 'Landsat_separate_images.mat';
+input_mat_name = 'Landsat_separate_images_BR_R002.mat';
 % input_mat_name = 'Landsat.mat';
 
 % mvcnmf parameters
-c = 3; % number of endmembers
+c = 5; % number of endmembers
 SNR = 20; %dB
 tol = 1e-6;
 maxiter = 150;
@@ -36,6 +36,7 @@ for i = 1:length(variables)
     fprintf("Processing %s/%s images\n", num2str(i), num2str(length(variables)));
     disp("#########################################")
     variable_name = variables{i};
+    variable_name = "BR_R002_23KPR00_2014_01_09";
     % Load the first variable in the list
     loaded_variable = load(input_path, variable_name);
     % Set variable A equal to the loaded variable
@@ -114,12 +115,13 @@ for i = 1:length(variables)
     %meanData = mean(mixed');
 
     % use conjugate gradient to find A can speed up the learning
+    maxiter_str = sprintf('%d', maxiter);
     [Aest, sest] = mvcnmf(mixed, Ainit, sinit, A, UU, PrinComp, meanData, T, tol, maxiter, showflag, 2, 1, use_synthetic_data);
 
     % visualize endmembers in scatterplots
-    d = 4;
-
+    
     if showflag
+        d = 4;
         Anmf = UU' * Aest;
         figure,
 
@@ -229,13 +231,16 @@ for i = 1:length(variables)
 
     
     % Save output
-    outputFileName = sprintf('outputs/output_%s_%s', variable_name, input_mat_name);  
+    % keep only 2 digits after the decimal point
+    T_str = sprintf('%.4f', T);
+    outputFileName = sprintf('outputs/output_%s_max_iter%s_T%s.mat', variable_name, maxiter_str, T_str);  
     
     if use_synthetic_data == 1
         save(outputFileName, 'Aest', 'sest', 'E_rmse', 'E_aad', 'E_aid', 'E_sad', 'E_sid');
     else
         save(outputFileName, 'Aest', 'sest');
     end
+    break
 end
 % Stop the timer
 elapsed_time = toc;

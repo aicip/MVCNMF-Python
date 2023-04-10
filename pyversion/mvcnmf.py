@@ -26,17 +26,14 @@ def mvcnmf_secord(
 
     c = S.shape[0]  # number of endmembers
     N = S.shape[1]  # number of pixels
-
+    PrinComp = PrinComp.T
     if use_synthetic_data == 1:
         EM = UU.T @ Atrue  # low dimensional endmembers
         LowX = UU.T @ X  # low dimensional data
-        E = np.vstack(
-            (
-                np.ones((1, c)),
-                PrinComp[:, : c - 1].T
-                @ (Atrue - mean_data[:, np.newaxis] * np.ones((1, c))),
-            )
-        )
+        
+        _ones = np.ones((1, c))
+        _PrinComp = PrinComp[:, : c - 1].T
+        E = np.vstack((_ones, _PrinComp @ (Atrue - mean_data.T * _ones)))
         vol_t = (
             1 / factorial(c - 1) * abs(np.linalg.det(E))
         )  # the volume of true endmembers
@@ -47,7 +44,7 @@ def mvcnmf_secord(
     B = np.vstack((np.zeros((1, c - 1)), np.eye(c - 1)))
     Z = C + B @ (
         PrinComp[:, : c - 1].T
-        @ (A - mean_data[:, np.newaxis] * np.ones((1, c)))
+        @ (A - mean_data.T * np.ones((1, c)))
     )
     detz2 = np.linalg.det(Z) * np.linalg.det(Z)
 
@@ -112,7 +109,7 @@ def mvcnmf_secord(
             (
                 np.ones((1, c)),
                 PrinComp[:, : c - 1].T
-                @ (A - mean_data[:, np.newaxis] * np.ones((1, c))),
+                @ (A - mean_data.T * np.ones((1, c))),
             )
         )
         vol_e = 1 / factorial(c - 1) * abs(np.linalg.det(E))
@@ -142,7 +139,7 @@ def mvcnmf_secord(
         if type_alg_S == 1:
             no_iter = 50
             S = conjugate(
-                tX, tA, S, no_iter, PrinComp[:, : c - 1], mean_data, T
+                X, A, S, no_iter, PrinComp[:, : c - 1], mean_data, T
             )
         elif type_alg_S == 2:
             tolS = 0.0001
@@ -156,13 +153,13 @@ def mvcnmf_secord(
         if type_alg_A == 1:
             no_iter = 50
             A = conjugate(
-                tX.T, S.T, A.T, no_iter, PrinComp[:, : c - 1], mean_data, T
+                X.T, S.T, A.T, no_iter, PrinComp[:, : c - 1], mean_data, T
             )
             A = A.T
         elif type_alg_A == 2:
             tolA = 0.0001
             A, gradA, iterA = steepdescent(
-                tX.T, S.T, A.T, tolA, 100, PrinComp[:, : c - 1], mean_data, T
+                X.T, S.T, A.T, tolA, 100, PrinComp[:, : c - 1], mean_data, T
             )
             A = A.T
             gradA = gradA.T
@@ -175,4 +172,4 @@ def mvcnmf_secord(
 
         iter = iter + 1
 
-    return A, S, iter
+    return A, S

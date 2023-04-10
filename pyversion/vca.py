@@ -92,7 +92,7 @@ def vca(R, p, SNR=None, verbose=True):
         u = np.mean(x, axis=1)[:, np.newaxis]
         y = x / np.tile(np.sum(x * np.tile(u, [1, N]), axis=0), [d, 1])
 
-    indice = np.zeros(p, dtype=int)
+    indice = np.zeros(p, dtype=int) - 1
     A = np.zeros((p, p))
     A[-1, 0] = 1
 
@@ -102,7 +102,7 @@ def vca(R, p, SNR=None, verbose=True):
         f = f / np.sqrt(np.sum(f**2))
 
         v = f.T @ y
-        _, indice[i] = np.max(np.abs(v)), np.argmax(np.abs(v))
+        _, indice[i] = np.max(np.abs(v)), np.argmax(np.abs(v)) - 1
         A[:, i] = y[:, indice[i]]
 
     Ae = Rp[:, indice]
@@ -118,4 +118,4 @@ def estimate_snr(R, r_m, x):
     P_x = np.sum(x**2) / N + r_m.T @ r_m
     snr_est = 10 * np.log10((P_x - p / L * P_y) / (P_y - P_x))
 
-    return snr_est
+    return snr_est.item()

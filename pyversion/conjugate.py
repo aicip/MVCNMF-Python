@@ -20,7 +20,7 @@ def conjugate(X, A, S, maxiter, U, mean_data, tao):
         B = np.vstack((np.zeros((1, c - 1)), np.eye(c - 1)))
         Z = C + B @ U.T @ (S.T - mean_data)
         ZD = np.linalg.pinv(Z) @ B @ U.T
-        detz2 = np.linalg.det(Z) ** 2
+        detz2 = (np.linalg.det(Z) ** 2).reshape(-1, 1)
 
     if cons == 1:
         gradp = AtA @ S - AtX + tao * detz2 * ZD  # type: ignore

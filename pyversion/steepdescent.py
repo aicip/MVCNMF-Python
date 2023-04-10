@@ -11,7 +11,7 @@ def steep_descent(X, A, S, tol, maxiter, U, mean_data, tao):
     U, mean_data: principal components and data mean to calculate the volume
     tao: regularization parameter
     """
-    grad = None 
+    grad = None
     L, N = X.shape
     c, N = S.shape
 
@@ -69,7 +69,7 @@ def steep_descent(X, A, S, tol, maxiter, U, mean_data, tao):
                              sigma * np.sum(np.sum(grad * d)))
             else:
                 gradd = np.sum(np.sum(grad * d))
-                dQd = np.sum(np.sum((AtA * d) * d))
+                dQd = np.sum(np.sum((AtA @ d) * d))
                 suff_decr = 0.99 * gradd + 0.5 * dQd < 0
 
             if inner_iter == 0:

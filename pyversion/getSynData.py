@@ -19,9 +19,9 @@ def get_syn_data(A, win, pure):
 
     The pure pixels can be removed by adding the following two lines
             ----Index = ceil(find(abf>0.8)/c);
-            ----abf[:,Index] = 1/c*ones(c,1)*ones(1,length(Index));
+            ----abf[:,Index] = 1/c*ones(c,1)*ones(0,length(Index));
     """
-    print("2- ", A.shape)
+
     band, c = A.shape
     dim = 64
 
@@ -57,7 +57,7 @@ def get_syn_data(A, win, pure):
     abf = abf.reshape(M * N, c).T
 
     if pure == 0:
-        index = np.ceil(np.argwhere(abf > 0.8) / c).flatten() 
+        index = np.ceil(np.argwhere(abf > 0.8) / c).flatten().astype(int)
         abf[:, index] = (1 / c) * np.ones((c, len(index)))
 
     mixed = (A @ abf).T.reshape(M, N, band)

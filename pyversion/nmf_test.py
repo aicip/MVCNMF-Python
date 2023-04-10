@@ -15,11 +15,12 @@ from vca import vca
 
 # --- Parameters --- %
 # input parameters
+
 # Synthetic Data
 use_synthetic_data = True
 input_mat_name = "A.mat"
-bands = (1, 2, 3, 4)
 bands_mat_name = "BANDS.mat"
+
 # Landsat Data
 # use_synthetic_data = False
 # input_mat_name = 'Landsat_separate_images_BR_R002.mat'
@@ -31,7 +32,7 @@ SNR = 20  # dB
 tol = 1e-6
 maxiter = 150
 T = 0.015
-showflag = 0
+showflag = 1
 verbose = True
 
 # --- read data --- %
@@ -57,29 +58,28 @@ for i in range(len(variables)):
     loaded_variable = sio.loadmat(input_path)
     # Set variable A equal to the loaded variable
     A = loaded_variable[variable_name]
-    print("1- ", A.shape)
+    print(f"Loaded {variable_name} with shape {A.shape}")
     if use_synthetic_data:
         # Load bands
-        if "bands_mat_name" not in globals() or "bands" not in globals():
-            A = A[:, 1:c]
-        else:
-            if "bands_mat_name" not in globals():
-                print("using code-specified bands")
-                A = A[bands, 1:c]
-            else:
-                print("using bands file")
-                bands_path = os.path.join("../inputs", bands_mat_name)
-                bands_mat = sio.loadmat(bands_path)
-                BANDS = bands_mat["BANDS"]
-                A = A[BANDS, 1:c]
-
+        try:
+            bands_path = os.path.join("../inputs", bands_mat_name)
+            bands_mat = sio.loadmat(bands_path)
+            BANDS = bands_mat["BANDS"].reshape(-1)
+            A = A[BANDS, :c]
+            print(f"Bands have shape {BANDS.shape}")
+        except NameError:
+            A = A[:, :c]
+    print(f"Transformed {variable_name} to shape {A.shape}")
     # --- process --- %
 
     if use_synthetic_data:
         [synthetic, abf] = getSynData(A, 7, 0)
+        print(f"Synthetic data has shape {synthetic.shape}")
+        print(f"abf has shape {abf.shape}")
         # [M, N, D] = size(synthetic)
         M, N, D = synthetic.shape
         mixed = synthetic.reshape(M * N, D)
+        print(f"Mixed has shape {mixed.shape}")
         # add noise
         variance = np.sum(mixed**2) / 10 ** (SNR / 10) / M / N / D
         n = np.sqrt(variance) * np.random.randn(D, M * N)
@@ -102,13 +102,14 @@ for i in range(len(variables)):
         UU = np.empty((0, 0))
         # vca algorithm
         A_vca, EndIdx = vca(mixed, p=c, verbose=verbose)
-
+    print("A - ", A.shape)
+    print("Mixed - ", mixed.shape)
     # FCLS
-    AA = np.vstack([1e-5 * A_vca, np.ones((1, len(A_vca[0])))])
-    s_fcls = np.zeros((len(A_vca[0]), M * N))
+    AA = np.vstack([1e-5 * A_vca, np.ones((1, A_vca.shape[1]))])
+    s_fcls = np.zeros((A_vca.shape[1], M * N))
 
     for j in range(M * N):
-        r = np.hstack([1e-5 * mixed[:, j], 1])
+        r = np.hstack([1e-5 * mixed[:, j], [1]])
         s_fcls[:, j] = np.linalg.lstsq(AA, r, rcond=None)[0]
 
     # use vca to initiate
@@ -118,7 +119,7 @@ for i in range(len(variables)):
     # PCA
     pca = PCA()
     PrinComp = pca.fit_transform(mixed.T)
-    meanData = np.mean(PrinComp, axis=0)
+    meanData = np.mean(PrinComp, axis=0)[:, np.newaxis].T
 
     # use conjugate gradient to find A can speed up the learning
     maxiter_str = f"{maxiter}"
@@ -164,7 +165,7 @@ for i in range(len(variables)):
     if use_synthetic_data == 1:
         # permute results
         CRD = np.corrcoef(np.hstack([A, Aest]))
-        DD = np.abs(CRD[c : 2 * c, 0:c])
+        DD = np.abs(CRD[c : 2 * c, :c])
         perm_mtx = np.zeros((c, c))
         aux = np.zeros((c, 1))
 
@@ -173,34 +174,42 @@ for i in range(len(variables)):
             perm_mtx[ld, cd] = 1
             DD[:, cd] = aux.squeeze()
             DD[ld, :] = aux.squeeze().T
+        
+        print("Aest - ", Aest.shape)
         Aest = Aest @ perm_mtx
-        sest = (sest.T @ perm_mtx).T
+        print("Aest @ perm_mtx - ", Aest.shape)
+        sest = (sest.T @ perm_mtx)
+        print("(sest.T @ perm_mtx) - ", sest.shape)
         Sest = np.reshape(sest, (M, N, c))
+        print("Sest - ", Sest.shape)
         sest = sest.T
+        print("sest.T - ", sest.shape)
 
     # show the estimations
     if showflag:
         fig, axs = plt.subplots(c, 4)
 
         for i in range(c):
-            axs[i, 0].plot(A[:, i], "r")
+            axs[i, 0].plot(A[:, i], "r", label="True endmembers")
             axs[i, 0].set_ylim(0, 1)
 
             if i == 0:
                 axs[i, 0].set_title("True end-members")
 
-            axs[i, 1].plot(Aest[:, i], "g")
+            axs[i, 1].plot(Aest[:, i], "g", label="Estimated endmembers")
+            axs[i, 1].legend()
+
             axs[i, 1].set_ylim(0, 1)
 
             if i == 0:
                 axs[i, 1].set_title("Estimated end-members")
 
-            axs[i, 2].imshow(reshape(abf[i, :], (M, N)))
+            axs[i, 2].imshow(abf[i, :].reshape(M, N))
 
             if i == 0:
                 axs[i, 2].set_title("True abundance")
 
-            axs[i, 3].imshow(Sest[:, :, i])
+            axs[i, 3].imshow(sest[i, :].reshape(M, N))
 
             if i == 0:
                 axs[i, 3].set_title("Estimated abundance")
@@ -210,6 +219,11 @@ for i in range(len(variables)):
     # quantitative evaluation of spectral signature and abundance
     if use_synthetic_data:
         # rmse error of abundances
+        print("abf - ", abf.shape)
+        print("sest - ", sest.shape)
+        print("M - ", M)
+        print("N - ", N)
+        print("c - ", c)
         E_rmse = np.sqrt(np.sum((abf - sest) ** 2) / (M * N * c))
         print(E_rmse)
 
@@ -254,19 +268,14 @@ for i in range(len(variables)):
     # keep only 2 digits after the decimal point
     T_str = f"{T:.4f}"
     outputFileName = (
-        f"outputs/output_{variable_name}_max_iter{maxiter}_T{T_str}.mat"
+        f"../outputs/output_{variable_name}_max_iter{maxiter}_T{T_str}.mat"
     )
-    # TODO: fix this
+
     if use_synthetic_data:
-        sio.savemat(
-            outputFileName,
-            "Aest",
-            "sest",
-            "E_rmse",
-            "E_aad",
-            "E_aid",
-            "E_sad",
-            "E_sid",
-        )
+        data = {"Aest": Aest, "sest": sest, "E_rmse": E_rmse, 
+                "E_aad": E_aad, "E_aid": E_aid, "E_sad": E_sad, 
+                "E_sid": E_sid}
     else:
-        sio.savemat(outputFileName, "Aest", "sest")
+        data = {"Aest": Aest, "sest": sest}
+
+    sio.savemat(outputFileName, data)

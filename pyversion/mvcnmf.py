@@ -52,13 +52,20 @@ def mvcnmf_secord(
         startA = UU.T @ Ainit
 
         fig, axes = plt.subplots(2, 2)
-
+        # Flatten the axes array to make it 
+        # easier to index
+        axes = axes.flatten()  # type: ignore
+        index = 0
         for i in range(3):
             for j in range(i + 1, 3):
-                ax = axes[i - 1, j - i]
+                ax = axes[index]
                 ax.plot(LowX[i, ::6], LowX[j, ::6], "rx")
                 ax.plot(startA[i, :], startA[j, :], "bo")
                 ax.plot(EM[i, :], EM[j, :], "go", markerfacecolor="g")
+                index += 1
+
+        # Remove the unused subplot
+        axes[-1].set_visible(False)
 
     gradA = (
         A @ (S @ S.T)
@@ -125,13 +132,23 @@ def mvcnmf_secord(
 
         if showflag:
             est = UU.T @ A
-            Ahistory.append(est)
+
+            if len(Ahistory) == 0:
+                Ahistory = est
+            else:
+                Ahistory = np.hstack([Ahistory, est])
+
+            index = 0
             for i in range(3):
                 for j in range(i + 1, 3):
-                    ax = axes[i - 1, j - i]
-                    ax.plot(est[i, :], est[j, :], "yo")
+                    ax = axes[index]
+                    ax.plot(est[i, :], est[j, :], 'yo')  # estimation from nmf
+                    index += 1
+
             plt.draw()
-            plt.pause(0.001)
+            plt.pause(0.001)  # pause to allow the figure to update
+
+
 
         tX = np.vstack((X, 20 * np.ones((1, N))))
         tA = np.vstack((A, 20 * np.ones((1, c))))

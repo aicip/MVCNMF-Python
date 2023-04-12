@@ -145,22 +145,21 @@ for i in range(len(variables)):
     if showflag:
         d = 4
         Anmf = UU.T @ Aest
-
-        fig, axs = plt.subplots(d - 2, d - 2)
-
+        
+        fig, axes = plt.subplots(d - 2, d - 2)
+        axes = np.ravel(axes)
+        index = 0
         for i in range(d - 1):
             for j in range(i + 1, d - 1):
-                axs[i, j - i].plot(
-                    Lowmixed[i, 1:6:end], Lowmixed[j, 1:6:end], "rx"
-                )
-                axs[i, j - i].plot(
-                    EM[i, :], EM[j, :], "go", markerfacecolor="g"
-                )
-                axs[i, j - i].plot(
-                    Anmf[i, :], Anmf[j, :], "bo", markerfacecolor="b"
-                )
+                ax = axes[index]
+                ax.plot(Lowmixed[i, ::6], Lowmixed[j, ::6], 'rx')
+                ax.plot(EM[i, :], EM[j, :], 'go', markerfacecolor='g')
+                ax.plot(Anmf[i, :], Anmf[j, :], 'bo', markerfacecolor='b')
+                index += 1
 
         plt.show()
+
+
 
     if use_synthetic_data == 1:
         # permute results

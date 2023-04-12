@@ -24,6 +24,7 @@ function [A, S, time] = mvcnmf_secord(X, Ainit, Sinit, Atrue, UU, PrinComp, mean
     if use_synthetic_data == 1
         EM = UU' * Atrue; % low dimensional endmembers
         LowX = UU' * X; % low dimensional data
+
         E = [ones(1, c); PrinComp(:, 1:c - 1)' * (Atrue - meanData' * ones(1, c))];
         vol_t = 1 / factorial(c - 1) * abs(det(E)); % the volume of true endmembers
     end
@@ -74,116 +75,116 @@ function [A, S, time] = mvcnmf_secord(X, Ainit, Sinit, Atrue, UU, PrinComp, mean
     flag = 0;
     iter = 0;
 
-    while inc < 5 & inc0 < 20
+    while inc < 5 && inc0 < 20
 
         % uphill or downhill
-        if objhistory(end - 1) - objhistory(end) > 0.0001
-            inc = 0;
-        elseif objhistory(end) - objhistory(end - 1) > 50
-            fprintf('Diverge after %d iterations!', iter);
-            break;
-        else
-            disp('uphill');
-            inc = inc + 1;
-            inc0 = inc0 + 1;
-        end
+        if objhistory( end - 1) - objhistory(end) > 0.0001
+        inc = 0;
+    elseif objhistory(end) - objhistory(end - 1) > 50
+        fprintf('Diverge after %d iterations!', iter);
+        break;
+    else
+        disp('uphill');
+        inc = inc + 1;
+        inc0 = inc0 + 1;
+    end
 
-        if iter < 5
-            inc = 0;
-        end
+    if iter < 5
+        inc = 0;
+    end
 
-        if iter == 0
-            objhistory(end) = objhistory(end - 1);
-        end
+    if iter == 0
+        objhistory(end) = objhistory(end - 1);
+    end
 
-        % stopping condition
-        projnorm = norm([gradA(gradA < 0 | A > 0); gradS(gradS < 0 | S > 0)]);
+    % stopping condition
+    projnorm = norm([gradA(gradA < 0 | A > 0); gradS(gradS < 0 | S > 0)]);
 
-        if iter > maxiter,
-            disp('Max iter reached, stopping!');
-            break;
-        end
+    if iter > maxiter,
+        disp('Max iter reached, stopping!');
+        break;
+    end
 
-        % Show progress
-        E = [ones(1, c); PrinComp(:, 1:c - 1)' * (A - meanData' * ones(1, c))];
-        vol_e = 1 / factorial(c - 1) * abs(det(E));
-        fprintf('[%d]: %.5f\t', iter, objhistory(end));
-        fprintf('Temperature: %f \t', T);
+    % Show progress
+    E = [ones(1, c); PrinComp(:, 1:c - 1)' * (A - meanData' * ones(1, c))];
+    vol_e = 1 / factorial(c - 1) * abs(det(E));
+    fprintf('[%d]: %.5f\t', iter, objhistory(end));
+    fprintf('Temperature: %f \t', T);
 
-        if use_synthetic_data == 1
-            fprintf('Actual Vol.: %f \t Estimated Vol.: %f\n', vol_t, vol_e);
-        else
-            fprintf('Estimated Vol.: %f\n', vol_e);
-        end
+    if use_synthetic_data == 1
+        fprintf('Actual Vol.: %f \t Estimated Vol.: %f\n', vol_t, vol_e);
+    else
+        fprintf('Estimated Vol.: %f\n', vol_e);
+    end
 
-        vol(iter + 1) = vol_e;
+    vol(iter + 1) = vol_e;
 
-        % real time draw
-        if showflag,
-            est = UU' * A;
-            Ahistory = [Ahistory est];
-            figure(1),
+    % real time draw
+    if showflag,
+        est = UU' * A;
+        Ahistory = [Ahistory est];
+        figure(1),
 
-            for i = 1:3
+        for i = 1:3
 
-                for j = i + 1:3
-                    subplot(2, 2, (i - 1) * 2 + j - i),
-                    plot(est(i, :), est(j, :), 'yo'); %estimation from nmf
-                end
-
+            for j = i + 1:3
+                subplot(2, 2, (i - 1) * 2 + j - i),
+                plot(est(i, :), est(j, :), 'yo'); %estimation from nmf
             end
 
-            drawnow;
         end
 
-        % to consider the sum-to-one constraint
-        tX = [X; 20 * ones(1, N)];
-        tA = [A; 20 * ones(1, c)];
+        drawnow;
+    end
 
-        % find S
-        switch type_alg_S
+    % to consider the sum-to-one constraint
+    tX = [X; 20 * ones(1, N)];
+    tA = [A; 20 * ones(1, c)];
 
-            case 1 % conjugate gradient learning
+    % find S
+    switch type_alg_S
 
-                no_iter = 50;
-                S = conjugate(X, A, S, no_iter, PrinComp(:, 1:c - 1), meanData, T);
+        case 1 % conjugate gradient learning
 
-            case 2 % steepest descent
+            no_iter = 50;
+            S = conjugate(X, A, S, no_iter, PrinComp(:, 1:c - 1), meanData, T);
 
-                tolS = 0.0001;
-                [S, gradS, iterS] = steepdescent(tX, tA, S, tolS, 200, PrinComp(:, 1:c - 1), meanData, T);
+        case 2 % steepest descent
 
-                if iterS == 1,
-                    tolS = 0.1 * tolS;
-                end
+            tolS = 0.0001;
+            [S, gradS, iterS] = steepdescent(tX, tA, S, tolS, 200, PrinComp(:, 1:c - 1), meanData, T);
 
-        end
-
-        % find A
-        switch type_alg_A
-
-            case 1 % conjugate gradient learning
-
-                no_iter = 50;
-                A = conjugate(X', S', A', no_iter, PrinComp(:, 1:c - 1), meanData, T);
-                A = A';
-
-            case 2 % steepest descent
-
-                tolA = 0.0001;
-                [A, gradA, iterA] = steepdescent(X', S', A', tolA, 100, PrinComp(:, 1:c - 1), meanData, T);
-                A = A'; gradA = gradA';
-
-                if iterA == 1,
-                    tolA = 0.1 * tolA;
-                end
-
-        end
-
-        % Calculate objective
-        newobj = 0.5 * sum(sum((X - A * S) .^ 2));
-        objhistory = [objhistory newobj];
-
-        iter = iter + 1;
+            if iterS == 1,
+                tolS = 0.1 * tolS;
+            end
 
     end
+
+    % find A
+    switch type_alg_A
+
+        case 1 % conjugate gradient learning
+
+            no_iter = 50;
+            A = conjugate(X', S', A', no_iter, PrinComp(:, 1:c - 1), meanData, T);
+            A = A';
+
+        case 2 % steepest descent
+
+            tolA = 0.0001;
+            [A, gradA, iterA] = steepdescent(X', S', A', tolA, 100, PrinComp(:, 1:c - 1), meanData, T);
+            A = A'; gradA = gradA';
+
+            if iterA == 1,
+                tolA = 0.1 * tolA;
+            end
+
+    end
+
+    % Calculate objective
+    newobj = 0.5 * sum(sum((X - A * S) .^ 2));
+    objhistory = [objhistory newobj];
+
+    iter = iter + 1;
+
+end

@@ -3,13 +3,13 @@ clear;
 % --- Parameters --- %
 % input parameters
 % Syntheitc Data
-% use_synthetic_data = 1; % 1 for synthetic data, 0 for real data
-% input_mat_name = 'A.mat';
+use_synthetic_data = 1; % 1 for synthetic data, 0 for real data
+input_mat_name = 'A.mat';
 % bands = (1:4);
-% bands_mat_name = 'BANDS.mat';
+bands_mat_name = 'BANDS.mat';
 % Landsat Data
-use_synthetic_data = 0; % 1 for synthetic data, 0 for real data
-input_mat_name = 'Landsat_separate_images_BR_R002.mat';
+% use_synthetic_data = 0; % 1 for synthetic data, 0 for real data
+% input_mat_name = 'Landsat_separate_images_BR_R002.mat';
 % input_mat_name = 'Landsat.mat';
 
 % mvcnmf parameters
@@ -36,26 +36,25 @@ for i = 1:length(variables)
     fprintf("Processing %s/%s images\n", num2str(i), num2str(length(variables)));
     disp("#########################################")
     variable_name = variables{i};
-    variable_name = "BR_R002_23KPR00_2014_01_09";
+    %     variable_name = "BR_R002_23KPR00_2014_01_09";
     % Load the first variable in the list
     loaded_variable = load(input_path, variable_name);
     % Set variable A equal to the loaded variable
     A = loaded_variable.(variable_name);
+
     if use_synthetic_data == 1
         % Load bands
-        if ~exist('bands_mat_name', 'var') || ~exist('bands', 'var')
+        if ~exist('bands_mat_name', 'var') && ~exist('bands', 'var')
             A = A(:, (1:c));
         else
-            if ~exist('bands_mat_name', 'var')
-                disp("using code-specified bands");
-                A = A(bands, (1:c));
-            else
-                disp("using bands file");
-                bands_path = sprintf('inputs/%s', bands_mat_name);
-                load(bands_path);
-                A = A(BANDS, (1:c));
-            end
+
+            disp("using bands file");
+            bands_path = sprintf('inputs/%s', bands_mat_name);
+            load(bands_path);
+            A = A(BANDS, (1:c));
+
         end
+
     end
 
     % --- process --- %
@@ -69,7 +68,7 @@ for i = 1:length(variables)
         n = sqrt(variance) * randn([D M * N]);
         mixed = mixed' + n;
         clear n;
-        
+
         % remove noise
         [UU, SS, VV] = svds(mixed, c);
         Lowmixed = UU' * mixed;
@@ -94,7 +93,7 @@ for i = 1:length(variables)
     s_fcls = zeros(length(A_vca(1, :)), M * N);
 
     for j = 1:M * N
-        r = [1e-5 * mixed(:, j); 1];    
+        r = [1e-5 * mixed(:, j); 1];
         %   s_fcls(:,j) = nnls(AA,r);
         s_fcls(:, j) = lsqnonneg(AA, r);
     end
@@ -119,7 +118,7 @@ for i = 1:length(variables)
     [Aest, sest] = mvcnmf(mixed, Ainit, sinit, A, UU, PrinComp, meanData, T, tol, maxiter, showflag, 2, 1, use_synthetic_data);
 
     % visualize endmembers in scatterplots
-    
+
     if showflag
         d = 4;
         Anmf = UU' * Aest;
@@ -135,7 +134,7 @@ for i = 1:length(variables)
             end
 
         end
-        
+
     end
 
     if use_synthetic_data == 1
@@ -151,10 +150,7 @@ for i = 1:length(variables)
             perm_mtx(ld, cd) = 1;
             DD(:, cd) = aux; DD(ld, :) = aux';
         end
-        Aest = Aest * perm_mtx;
-        sest = sest' * perm_mtx;
-        Sest = reshape(sest, [M, N, c]);
-        sest = sest';
+
     end
 
     % show the estimations
@@ -211,7 +207,7 @@ for i = 1:length(variables)
         E_entropy = sum(abf .* log((abf +1e-9) ./ (sest +1e-9))) + sum(sest .* log((sest +1e-9) ./ (abf +1e-9)));
         E_aid = mean(E_entropy .^ 2) ^ .5;
         display(E_aid);
-        
+
         % the angle between material signatures
         nA = diag(A' * A);
         nAest = diag(Aest' * Aest);
@@ -228,20 +224,20 @@ for i = 1:length(variables)
         display(E_sid);
     end
 
-
-    
     % Save output
     % keep only 2 digits after the decimal point
     T_str = sprintf('%.4f', T);
-    outputFileName = sprintf('outputs/output_%s_max_iter%s_T%s.mat', variable_name, maxiter_str, T_str);  
-    
+    outputFileName = sprintf('outputs/output_%s_max_iter%s_T%s.mat', variable_name, maxiter_str, T_str);
+
     if use_synthetic_data == 1
         save(outputFileName, 'Aest', 'sest', 'E_rmse', 'E_aad', 'E_aid', 'E_sad', 'E_sid');
     else
         save(outputFileName, 'Aest', 'sest');
     end
+
     break
 end
+
 % Stop the timer
 elapsed_time = toc;
 

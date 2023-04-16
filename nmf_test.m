@@ -18,7 +18,7 @@ SNR = 20; %dB
 tol = 1e-6;
 maxiter = 150;
 T = 0.015;
-showflag = 0;
+showflag = 1;
 verbose = 'on'; % 'on' or 'off'
 
 % --- read data --- %

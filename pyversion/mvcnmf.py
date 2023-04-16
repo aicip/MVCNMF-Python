@@ -30,7 +30,7 @@ def mvcnmf_secord(
     if use_synthetic_data == 1:
         EM = UU.T @ Atrue  # low dimensional endmembers
         LowX = UU.T @ X  # low dimensional data
-        
+
         _ones = np.ones((1, c))
         _PrinComp = PrinComp[:, : c - 1].T
         E = np.vstack((_ones, _PrinComp @ (Atrue - mean_data.T * _ones)))
@@ -147,8 +147,6 @@ def mvcnmf_secord(
 
             plt.draw()
             plt.pause(0.001)  # pause to allow the figure to update
-
-
 
         tX = np.vstack((X, 20 * np.ones((1, N))))
         tA = np.vstack((A, 20 * np.ones((1, c))))

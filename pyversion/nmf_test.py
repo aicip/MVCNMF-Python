@@ -58,7 +58,6 @@ for i in range(len(variables)):
     loaded_variable = sio.loadmat(input_path)
     # Set variable A equal to the loaded variable
     A = loaded_variable[variable_name]
-    print(f"Loaded {variable_name} with shape {A.shape}")
     if use_synthetic_data:
         # Load bands
         try:
@@ -66,16 +65,12 @@ for i in range(len(variables)):
             bands_mat = sio.loadmat(bands_path)
             BANDS = bands_mat["BANDS"].reshape(-1)
             A = A[BANDS, :c]
-            print(f"Bands have shape {BANDS.shape}")
         except NameError:
             A = A[:, :c]
-    print(f"Transformed {variable_name} to shape {A.shape}")
     # --- process --- %
 
     if use_synthetic_data:
         [synthetic, abf] = getSynData(A, 7, 0)
-        print(f"Synthetic data has shape {synthetic.shape}")
-        print(f"abf has shape {abf.shape}")
         # [M, N, D] = size(synthetic)
         M, N, D = synthetic.shape
         mixed = synthetic.reshape(M * N, D)
@@ -102,8 +97,6 @@ for i in range(len(variables)):
         UU = np.empty((0, 0))
         # vca algorithm
         A_vca, EndIdx = vca(mixed, p=c, verbose=verbose)
-    print("A - ", A.shape)
-    print("Mixed - ", mixed.shape)
     # FCLS
     AA = np.vstack([1e-5 * A_vca, np.ones((1, A_vca.shape[1]))])
     s_fcls = np.zeros((A_vca.shape[1], M * N))
@@ -159,8 +152,6 @@ for i in range(len(variables)):
 
         plt.show()
 
-
-
     if use_synthetic_data == 1:
         # permute results
         CRD = np.corrcoef(np.hstack([A, Aest]))
@@ -173,16 +164,11 @@ for i in range(len(variables)):
             perm_mtx[ld, cd] = 1
             DD[:, cd] = aux.squeeze()
             DD[ld, :] = aux.squeeze().T
-        
-        print("Aest - ", Aest.shape)
+     
         Aest = Aest @ perm_mtx
-        print("Aest @ perm_mtx - ", Aest.shape)
         sest = (sest.T @ perm_mtx)
-        print("(sest.T @ perm_mtx) - ", sest.shape)
         Sest = np.reshape(sest, (M, N, c))
-        print("Sest - ", Sest.shape)
         sest = sest.T
-        print("sest.T - ", sest.shape)
 
     # show the estimations
     if showflag:
@@ -218,11 +204,6 @@ for i in range(len(variables)):
     # quantitative evaluation of spectral signature and abundance
     if use_synthetic_data:
         # rmse error of abundances
-        print("abf - ", abf.shape)
-        print("sest - ", sest.shape)
-        print("M - ", M)
-        print("N - ", N)
-        print("c - ", c)
         E_rmse = np.sqrt(np.sum((abf - sest) ** 2) / (M * N * c))
         print(E_rmse)
 

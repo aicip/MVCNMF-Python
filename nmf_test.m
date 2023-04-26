@@ -63,10 +63,6 @@ for i = 1:length(variables)
     % print_summary(A, "A");
     if use_synthetic_data == 1
         [synthetic, abf] = getSynData(A, 7, 0);
-
-        % print_summary(synthetic, "synthetic");
-        % print_summary(abf, "abf");
-
         [M, N, D] = size(synthetic);
         mixed = reshape(synthetic, M * N, D);
         % add noise
@@ -97,12 +93,9 @@ for i = 1:length(variables)
         [A_vca, EndIdx] = vca(mixed, 'Endmembers', c, 'verbose', verbose);
     end
 
-    % print_summary(mixed, "mixed");
-
     % FCLS
     warning off;
     AA = [1e-5 * A_vca; ones(1, length(A_vca(1, :)))];
-    % print_summary(AA, "AA")
     s_fcls = zeros(length(A_vca(1, :)), M * N);
     
     for j = 1:M * N
@@ -110,7 +103,6 @@ for i = 1:length(variables)
         %   s_fcls(:,j) = nnls(AA,r);
         s_fcls(:, j) = lsqnonneg(AA, r);
     end
-    % print_summary(s_fcls, "s_fcls")
 
     % use vca to initiate
     Ainit = A_vca;
@@ -130,7 +122,20 @@ for i = 1:length(variables)
 
     % use conjugate gradient to find A can speed up the learning
     maxiter_str = sprintf('%d', maxiter);
-    [Aest, sest] = mvcnmf(mixed, Ainit, sinit, A, UU, PrinComp, meanData, T, tol, maxiter, showflag, 2, 1, use_synthetic_data);
+    [Aest, sest] = mvcnmf(mixed, 
+                          Ainit, 
+                          sinit, 
+                          A, 
+                          UU, 
+                          PrinComp, 
+                          meanData, 
+                          T, 
+                          tol, 
+                          maxiter, 
+                          showflag, 
+                          2, 
+                          1, 
+                          use_synthetic_data);
 
     % visualize endmembers in scatterplots
 

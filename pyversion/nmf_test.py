@@ -33,22 +33,22 @@ np.random.seed(0)  # Set the seed for reproducibility
 # input parameters
 
 # Synthetic Data
-use_synthetic_data = True
-input_mat_name = "A.mat"
-bands_mat_name = "BANDS.mat"
+# use_synthetic_data = True
+# input_mat_name = "A.mat"
+# bands_mat_name = "BANDS.mat"
 
 # Landsat Data
-# use_synthetic_data = False
-# input_mat_name = 'Landsat_separate_images_BR_R002.mat'
+use_synthetic_data = False
+input_mat_name = 'Landsat_separate_images_BR_R002.mat'
 # input_mat_name = 'Landsat.mat'
 
 # mvcnmf parameters
 c = 5  # number of endmembers
 SNR = 20  # dB
 tol = 1e-6
-maxiter = 5
+maxiter = 150
 T = 0.015
-showflag = True
+showflag = False
 verbose = True
 
 # --- read data --- %
@@ -68,8 +68,8 @@ for i in range(len(variables)):
     print("#########################################")
     print(f"Processing {i+1}/{len(variables)} images")
     print("#########################################")
-    variable_name = variables[i][0]
-    # variable_name = "BR_R002_23KPR00_2014_01_09"
+    # variable_name = variables[i][0]
+    variable_name = "BR_R002_23KPR00_2014_01_09"
     # Load the first variable in the list
     loaded_variable = sio.loadmat(input_path)
     # Set variable A equal to the loaded variable
@@ -87,9 +87,6 @@ for i in range(len(variables)):
     # print_summary(A, "A")
     if use_synthetic_data:
         [synthetic, abf] = getSynData(A, 7, 0)
-        # print_summary(synthetic, "synthetic")
-        # print_summary(abf, "abf")
-        # [M, N, D] = size(synthetic)
         M, N, D = synthetic.shape
         mixed = synthetic.reshape(M * N, D)
         # add noise
@@ -119,17 +116,14 @@ for i in range(len(variables)):
         # vca algorithm
         A_vca, EndIdx = vca(mixed, p=c, verbose=verbose)
 
-    # print_summary(mixed, "mixed")
     # FCLS
     AA = np.vstack([1e-5 * A_vca, np.ones((1, A_vca.shape[1]))])
-    # print_summary(AA, "AA")
     s_fcls = np.zeros((A_vca.shape[1], M * N))
 
     for j in range(M * N):
         r = np.hstack([1e-5 * mixed[:, j], [1]])
         # s_fcls[:, j] = np.linalg.lstsq(AA, r, rcond=None)[0]
         s_fcls[:, j] = nnls(AA, r)[0]
-    # print_summary(s_fcls, "s_fcls")
 
     # use vca to initiate
     Ainit = A_vca
@@ -139,7 +133,6 @@ for i in range(len(variables)):
     pca = PCA()
     pca_score = pca.fit_transform(mixed.T)
     PrinComp = pca.components_
-    # print_summary(PrinComp, "PrinComp")
     meanData = np.mean(pca_score, axis=0)[:, np.newaxis].T
 
     # use conjugate gradient to find A can speed up the learning
@@ -286,4 +279,5 @@ for i in range(len(variables)):
     else:
         data = {"Aest": Aest, "sest": sest}
 
-    sio.savemat(outputFileName, data)
+    sio.savemat(outputFileName, data, do_compression=True)
+    break

@@ -62,5 +62,23 @@ function S = conjugate(X, A, S, maxiter, U, meanData, tao)
         % save the current directions
         gradp = grad;
         conjp = conj;
+        % disp("****************")        
+        % print_summary(AtA, "AtA")
+        % print_summary(A, "A")
+        % print_summary(S, "S")
+        % print_summary(grad, "grad")
+        % disp("****************")
 
     end
+end
+
+% function print_summary(array, name)
+%     disp("---------------------------")
+%     fprintf('Size of %s: ', name);
+%     disp(size(array));
+%     fprintf('Minimum value: %.2f\n', min(array, [], 'all'));
+%     fprintf('Maximum value: %.2f\n', max(array, [], 'all'));
+%     fprintf('Mean value: %.2f\n', mean(array, 'all'));
+%     fprintf('Standard deviation: %.2f\n\n', std(array, 0, 'all'));
+%     disp("---------------------------")
+% end

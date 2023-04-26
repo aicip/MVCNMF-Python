@@ -1,6 +1,7 @@
 import numpy as np
 
 
+
 def steep_descent(X, A, S, tol, maxiter, U, mean_data, tao):
     """
     S, grad: output solution and gradient
@@ -28,13 +29,12 @@ def steep_descent(X, A, S, tol, maxiter, U, mean_data, tao):
     # precalculation to reduce computational complexity
     AtX = A.T @ X
     AtA = A.T @ A
-
     alpha = 1
     beta = 0.1
     sigma = 0.01
 
-    iter = None
-    for iter in range(maxiter):
+    iter_i = None
+    for iter_i in range(maxiter):
         # constraint on S^T
         if cons == 1:
             Z = C + B @ U.T @ (S.T - mean_data)  # type: ignore
@@ -95,4 +95,4 @@ def steep_descent(X, A, S, tol, maxiter, U, mean_data, tao):
                     Sp = Sn
     if grad is None:
         raise ValueError("Gradient is None")
-    return S, grad, iter
+    return S, grad, iter_i

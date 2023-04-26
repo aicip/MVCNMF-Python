@@ -1,4 +1,5 @@
 clear;
+rng(0);  % Set the seed for reproducibility
 
 % --- Parameters --- %
 % input parameters
@@ -16,9 +17,9 @@ bands_mat_name = 'BANDS.mat';
 c = 5; % number of endmembers
 SNR = 20; %dB
 tol = 1e-6;
-maxiter = 150;
+maxiter = 5;
 T = 0.015;
-showflag = 1;
+showflag = 0;
 verbose = 'on'; % 'on' or 'off'
 
 % --- read data --- %
@@ -59,8 +60,13 @@ for i = 1:length(variables)
 
     % --- process --- %
 
+    % print_summary(A, "A");
     if use_synthetic_data == 1
         [synthetic, abf] = getSynData(A, 7, 0);
+
+        % print_summary(synthetic, "synthetic");
+        % print_summary(abf, "abf");
+
         [M, N, D] = size(synthetic);
         mixed = reshape(synthetic, M * N, D);
         % add noise
@@ -72,6 +78,10 @@ for i = 1:length(variables)
         % remove noise
         [UU, SS, VV] = svds(mixed, c);
         Lowmixed = UU' * mixed;
+
+        % print_summary(UU, "UU")
+        % print_summary(Lowmixed, "Lowmixed")
+
         mixed = UU * Lowmixed;
         EM = UU' * A;
         % vca algorithm
@@ -87,16 +97,20 @@ for i = 1:length(variables)
         [A_vca, EndIdx] = vca(mixed, 'Endmembers', c, 'verbose', verbose);
     end
 
+    % print_summary(mixed, "mixed");
+
     % FCLS
     warning off;
     AA = [1e-5 * A_vca; ones(1, length(A_vca(1, :)))];
+    % print_summary(AA, "AA")
     s_fcls = zeros(length(A_vca(1, :)), M * N);
-
+    
     for j = 1:M * N
         r = [1e-5 * mixed(:, j); 1];
         %   s_fcls(:,j) = nnls(AA,r);
         s_fcls(:, j) = lsqnonneg(AA, r);
     end
+    % print_summary(s_fcls, "s_fcls")
 
     % use vca to initiate
     Ainit = A_vca;
@@ -109,6 +123,7 @@ for i = 1:length(variables)
 
     % PCA
     [PrinComp, pca_score] = pca(mixed');
+    % print_summary(PrinComp, "PrinComp")
     meanData = mean(pca_score);
     %[PrinComp, pca_score] = princomp(mixed', 0);
     %meanData = mean(mixed');
@@ -245,3 +260,15 @@ elapsed_time = toc;
 fprintf('Elapsed time: %.2f seconds\n', elapsed_time);
 % Program finished
 disp('Finished');
+
+
+function print_summary(array, name)
+    disp("---------------------------")
+    fprintf('Size of %s: ', name);
+    disp(size(array));
+    fprintf('Minimum value: %.2f\n', min(array, [], 'all'));
+    fprintf('Maximum value: %.2f\n', max(array, [], 'all'));
+    fprintf('Mean value: %.2f\n', mean(array, 'all'));
+    fprintf('Standard deviation: %.2f\n\n', std(array, 0, 'all'));
+    disp("---------------------------")
+end

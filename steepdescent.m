@@ -8,7 +8,8 @@ function [S, grad, iter] = steepdescent(X, A, S, tol, maxiter, U, meanData, tao)
     % U, meanData: principal components and data mean to calculate the volume
     % tao: regularization parameter
 
-    [L, N] = size(X); [c, N] = size(S);
+    [L, N] = size(X); 
+    [c, N] = size(S);
 
     % The constraint is only included when estimating A
     cons = 0;
@@ -29,7 +30,7 @@ function [S, grad, iter] = steepdescent(X, A, S, tol, maxiter, U, meanData, tao)
 
     alpha = 1; beta = 0.1; sigma = 0.01;
 
-    for iter = 1:maxiter,
+    for iter = 1:maxiter
 
         % constraint on S^T
         if cons == 1
@@ -48,12 +49,12 @@ function [S, grad, iter] = steepdescent(X, A, S, tol, maxiter, U, meanData, tao)
 
         projgrad = norm(grad(grad < 0 | S > 0));
 
-        if projgrad < tol,
+        if projgrad < tol
             break
         end
 
         % search step size
-        for inner_iter = 1:50,
+        for inner_iter = 1:50
             Sn = max(S - alpha * grad, 0); d = Sn - S;
 
             if cons == 1
@@ -66,13 +67,13 @@ function [S, grad, iter] = steepdescent(X, A, S, tol, maxiter, U, meanData, tao)
                 suff_decr = 0.99 * gradd + 0.5 * dQd < 0;
             end
 
-            if inner_iter == 1, % the first iteration determines whether we should increase or decrease alpha
+            if inner_iter == 1 % the first iteration determines whether we should increase or decrease alpha
                 decr_alpha = ~suff_decr; Sp = S;
             end
 
-            if decr_alpha,
+            if decr_alpha
 
-                if suff_decr,
+                if suff_decr
                     S = Sn; break;
                 else
                     alpha = alpha * beta;
@@ -80,7 +81,7 @@ function [S, grad, iter] = steepdescent(X, A, S, tol, maxiter, U, meanData, tao)
 
             else
 
-                if ~suff_decr | Sp == Sn,
+                if ~suff_decr | Sp == Sn
                     S = Sp; break;
                 else
                     alpha = alpha / beta; Sp = Sn;

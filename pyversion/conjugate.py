@@ -5,12 +5,13 @@ def conjugate(X, A, S, maxiter, U, mean_data, tao):
     """
     Projected conjugate gradient learning
     """
+    A = A.astype(np.float64)
 
     maxiter = 1
     AtA = A.T @ A
     AtX = A.T @ X
-    L, N = X.shape
-    c, _ = S.shape
+    L, _ = X.shape
+    c, N = S.shape
 
     cons = 0
     if L > N:
@@ -21,12 +22,14 @@ def conjugate(X, A, S, maxiter, U, mean_data, tao):
         Z = C + B @ U.T @ (S.T - mean_data)
         ZD = np.linalg.pinv(Z) @ B @ U.T
         detz2 = (np.linalg.det(Z) ** 2).reshape(-1, 1)
-
+    
+    # initial gradient
     if cons == 1:
         gradp = AtA @ S - AtX + tao * detz2 * ZD  # type: ignore
     else:
         gradp = AtA @ S - AtX
 
+    # initial conjugate direction
     conjp = gradp
     S = S - 0.001 * gradp
 
@@ -39,20 +42,25 @@ def conjugate(X, A, S, maxiter, U, mean_data, tao):
         else:
             grad = AtA @ S - AtX
 
+        # parameter beta
         beta = np.sum(grad * (grad - gradp), axis=1) / np.maximum(
             np.sum(gradp**2, axis=1), np.finfo(float).eps
-        )
+        ).reshape(1, -1)
 
-        conj = -grad + (beta * conjp.T).T
+        # new conjugate direction
+        conj = -grad + np.multiply(beta.reshape(-1, 1), conjp)
 
         AAd = AtA @ conj
-        alpha = np.sum(conj * (-grad), axis=1) / np.maximum(
-            np.sum(conj * AAd, axis=1), np.finfo(float).eps
-        )
+        alpha = np.sum(conj * (-grad), axis=0, keepdims=True) / np.maximum(
+            np.sum(conj * AAd, axis=0, keepdims=True), np.finfo(float).eps)
 
-        S = S + (conj * alpha.reshape(-1, 1))
+
+
+
+        S = S + (conj * alpha)
 
         gradp = grad
         conjp = conj
+    
 
     return S

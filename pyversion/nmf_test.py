@@ -1,9 +1,12 @@
 import numpy as np
 import scipy.io as sio
+from scipy.optimize import nnls
 import os
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import time
+from scipy.sparse.linalg import svds
+
 
 # from sklearn.linear_model import LassoLars
 # from scipy.linalg import svdvals
@@ -12,6 +15,19 @@ import time
 from getSynData import get_syn_data as getSynData
 from mvcnmf import mvcnmf_secord as mvcnmf
 from vca import vca
+
+
+def print_summary(array, name):
+    print("---------------------------")
+    print(f"Size of {name}: {array.shape}")
+    print(f"Minimum value: {np.min(array):.2f}")
+    print(f"Maximum value: {np.max(array):.2f}")
+    print(f"Mean value: {np.mean(array):.2f}")
+    print(f"Standard deviation: {np.std(array):.2f}")
+    print("---------------------------")
+
+
+np.random.seed(0)  # Set the seed for reproducibility
 
 # --- Parameters --- %
 # input parameters
@@ -30,9 +46,9 @@ bands_mat_name = "BANDS.mat"
 c = 5  # number of endmembers
 SNR = 20  # dB
 tol = 1e-6
-maxiter = 150
+maxiter = 5
 T = 0.015
-showflag = 1
+showflag = True
 verbose = True
 
 # --- read data --- %
@@ -57,7 +73,7 @@ for i in range(len(variables)):
     # Load the first variable in the list
     loaded_variable = sio.loadmat(input_path)
     # Set variable A equal to the loaded variable
-    A = loaded_variable[variable_name]
+    A = loaded_variable[variable_name].astype('float64')
     if use_synthetic_data:
         # Load bands
         try:
@@ -68,13 +84,14 @@ for i in range(len(variables)):
         except NameError:
             A = A[:, :c]
     # --- process --- %
-
+    # print_summary(A, "A")
     if use_synthetic_data:
         [synthetic, abf] = getSynData(A, 7, 0)
+        # print_summary(synthetic, "synthetic")
+        # print_summary(abf, "abf")
         # [M, N, D] = size(synthetic)
         M, N, D = synthetic.shape
         mixed = synthetic.reshape(M * N, D)
-        print(f"Mixed has shape {mixed.shape}")
         # add noise
         variance = np.sum(mixed**2) / 10 ** (SNR / 10) / M / N / D
         n = np.sqrt(variance) * np.random.randn(D, M * N)
@@ -82,12 +99,16 @@ for i in range(len(variables)):
         del n
 
         # remove noise
-        UU, SS, VV = np.linalg.svd(mixed, full_matrices=False)
+        UU, SS, VV = svds(mixed, k=c)
+        UU = UU[:, ::-1]  # Reverse the column order to match MATLAB output
         Lowmixed = UU.T @ mixed
+        
+        # print_summary(UU, "UU")
+        # print_summary(Lowmixed, "A")
         mixed = UU @ Lowmixed
         EM = UU.T @ A
         # vca algorithm
-        A_vca, EndIdx = vca(mixed, p=c, verbose=verbose)
+        A_vca, EndIdx = vca(mixed, p=c, SNR=SNR, verbose=verbose)
     else:
         # load data
         M, N, D = A.shape
@@ -97,13 +118,18 @@ for i in range(len(variables)):
         UU = np.empty((0, 0))
         # vca algorithm
         A_vca, EndIdx = vca(mixed, p=c, verbose=verbose)
+
+    # print_summary(mixed, "mixed")
     # FCLS
     AA = np.vstack([1e-5 * A_vca, np.ones((1, A_vca.shape[1]))])
+    # print_summary(AA, "AA")
     s_fcls = np.zeros((A_vca.shape[1], M * N))
 
     for j in range(M * N):
         r = np.hstack([1e-5 * mixed[:, j], [1]])
-        s_fcls[:, j] = np.linalg.lstsq(AA, r, rcond=None)[0]
+        # s_fcls[:, j] = np.linalg.lstsq(AA, r, rcond=None)[0]
+        s_fcls[:, j] = nnls(AA, r)[0]
+    # print_summary(s_fcls, "s_fcls")
 
     # use vca to initiate
     Ainit = A_vca
@@ -111,8 +137,10 @@ for i in range(len(variables)):
 
     # PCA
     pca = PCA()
-    PrinComp = pca.fit_transform(mixed.T)
-    meanData = np.mean(PrinComp, axis=0)[:, np.newaxis].T
+    pca_score = pca.fit_transform(mixed.T)
+    PrinComp = pca.components_
+    # print_summary(PrinComp, "PrinComp")
+    meanData = np.mean(pca_score, axis=0)[:, np.newaxis].T
 
     # use conjugate gradient to find A can speed up the learning
     maxiter_str = f"{maxiter}"
@@ -205,7 +233,7 @@ for i in range(len(variables)):
     if use_synthetic_data:
         # rmse error of abundances
         E_rmse = np.sqrt(np.sum((abf - sest) ** 2) / (M * N * c))
-        print(E_rmse)
+        print("E_rmse", E_rmse)
 
         # the angle between abundances
         nabf = np.diag(abf @ abf.T)
@@ -216,14 +244,14 @@ for i in range(len(variables)):
             * np.arccos(np.diag(abf @ sest.T) / np.sqrt(nabf * nsest))
         )
         E_aad = np.sqrt(np.mean(ang_beta**2))
-        print(E_aad)
+        print("E_aad", E_aad)
 
         # cross entropy between abundance
         E_entropy = np.sum(
             abf * np.log((abf + 1e-9) / (sest + 1e-9))
         ) + np.sum(sest * np.log((sest + 1e-9) / (abf + 1e-9)))
         E_aid = np.sqrt(np.mean(E_entropy**2))
-        print(E_aid)
+        print("E_aid", E_aid)
 
         # the angle between material signatures
         nA = np.diag(A.T @ A)
@@ -232,7 +260,7 @@ for i in range(len(variables)):
             180 / np.pi * np.arccos(np.diag(A.T @ Aest) / np.sqrt(nA * nAest))
         )
         E_sad = np.sqrt(np.mean(ang_theta**2))
-        print(E_sad)
+        print("E_sad", E_sad)
 
         # the spectral information divergence
         pA = A / (np.sum(A, axis=0))
@@ -242,7 +270,7 @@ for i in range(len(variables)):
             qA * np.log((qA + 1e-9) / (pA + 1e-9))
         )
         E_sid = np.sqrt(np.mean(SID**2))
-        print(E_sid)
+        print("E_sid", E_sid)
 
     # Save output
     # keep only 2 digits after the decimal point

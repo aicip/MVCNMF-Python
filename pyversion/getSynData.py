@@ -28,7 +28,7 @@ def get_syn_data(A, win, pure):
 
     for i in range(c - 1):
         label[i * num:(i + 1) * num] = i + 2
-    
+
     ridx = np.random.permutation(label.size)
     label = label[ridx].reshape(dim // 8, dim // 8)
     abf = np.zeros((dim, dim, c))

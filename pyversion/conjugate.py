@@ -61,6 +61,6 @@ def conjugate(X, A, S, maxiter, U, mean_data, tao):
 
         gradp = grad
         conjp = conj
-    
+
 
     return S

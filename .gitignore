@@ -4,3 +4,4 @@ outputs/*
 **/.vscode
 inputs/*.csv
 *.pyc
+.history

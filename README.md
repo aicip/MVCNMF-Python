@@ -4,11 +4,14 @@ The Minimum Volume Constrained Non-negative Matrix Factorization (MVC-NMF) is an
 
 ## Usage
 
-run "nmf_test.m"
+- create conda env with: `conda env create -f env.yml`
+- activate env: `conda activate mvcnmf`
+- run "python nmf_test.py"
 
 ## Contributors
 
-Lidan Miao, Hairong Qi (hqi@utk.edu), EECS, University of Tennessee, Knoxville
+Lidan Miao, Hairong Qi (<hqi@utk.edu>), EECS, University of Tennessee, Knoxville
+Code translated to Python by: Konstantinos Georgiou (<kgeorgio@vols.utk.edu>), Bredesen Center, University of Tennessee, Knoxville
 
 ## Reference
 
